@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import BookCard from "../components/BookCard"
+import Loader from "../components/Loader"
+
 
 const Search = () => {
     const navigate = useNavigate()
@@ -8,18 +10,33 @@ const Search = () => {
     const queryParam = searchParams.get("q") || ""
     const [textField, setTextField] = useState(queryParam)
     const [books, setBooks] = useState([])
+    const [isLoading, setIsLoading] = useState(false)
+    const [error , setError] = useState(null)
 
     useEffect(() => {
         const loadBooks = async () => {
+        try{
+            setIsLoading(true)
+            setBooks ([])
             const res = await fetch(
                 "https://openlibrary.org/search.json" +
                     "?q=" +
                     queryParam +
                     "&limit=20",
             )
+
+            if (!res.ok){
+           const data = await res.json()
+             throw new Error(data.detail[0].msg||"Что-то не так хыхыхыхыххы")
+             }
             const data = await res.json()
-            console.log(data)
             setBooks(data.docs)
+        } catch(error) {
+            console.error(error)
+            setError(error.message)
+        } finally {
+            setIsLoading(false)
+        }
         }
         loadBooks()
     }, [queryParam])
@@ -60,11 +77,18 @@ const Search = () => {
                     —
                 </span>
             </div>
+            {!isLoading && error && <p>{error}</p>}
+            {isLoading && <Loader />}
+            {books.length > 0 ?(
             <div className="book-grid" id="results">
-                {books.map((e) => (
-                    <BookCard {...e} />
-                ))}
+                {books.map((e) => {
+                    const {key, ... props} = e 
+                    return<BookCard key = {key} book_key = {key} {...props} />
+                })}
             </div>
+            ):(
+                !isLoading && <p>Нету тут книги</p>
+            )}
         </section>
     )
 }
